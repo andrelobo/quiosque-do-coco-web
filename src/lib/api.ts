@@ -1,4 +1,8 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+// VITE_API_URL (painel da Vercel) tem prioridade. O .env.production não é
+// versionado — só .env.example — então o build de produção usa este fallback.
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://quiosque-api.136-248-90-172.nip.io' : 'http://localhost:4000')
 
 class ApiError extends Error {
   constructor(public status: number, message: string, public data?: any) {
