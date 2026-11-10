@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // O registro é feito manualmente em src/main.tsx (com updater periódico).
+      injectRegister: null,
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'Quiosque do Coco',
