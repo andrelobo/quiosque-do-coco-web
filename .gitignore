@@ -1,0 +1,19 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+dev-dist/
+coverage/
+
+# Ambiente e segredos
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel/
+
+# Logs e temporários
+*.log
+.DS_Store
