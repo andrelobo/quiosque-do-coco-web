@@ -9,7 +9,7 @@ import { Badge, StatusBadge } from '../components/Badge'
 import { Modal } from '../components/Modal'
 import { Table, Pagination } from '../components/Table'
 import { Dropdown } from '../components/Dropdown'
-import { Skeleton } from '../components/Skeleton'
+import { Skeleton, SkeletonCard } from '../components/Skeleton'
 
 interface Product {
   id: string

@@ -4,12 +4,13 @@ import { useToast } from '../context/ToastContext'
 import { api, formatCurrency, getCategoryLabel, getStatusLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
+import { Select } from '../components/Select'
 import { Card, CardHeader, CardBody, CardFooter } from '../components/Card'
 import { Badge, StatusBadge } from '../components/Badge'
-import { Modal } from '../components/Modal'
+import { Modal, ConfirmModal } from '../components/Modal'
 import { Table, Pagination } from '../components/Table'
 import { Dropdown } from '../components/Dropdown'
-import { Skeleton } from '../components/Skeleton'
+import { Skeleton, SkeletonCard } from '../components/Skeleton'
 
 interface Product {
   id: string
