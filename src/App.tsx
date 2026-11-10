@@ -15,9 +15,15 @@ import { Dropdown } from './components/Dropdown'
 // Layout com sidebar
 const AppLayout = () => {
   const { user, logout, hasRole } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  // No celular o menu começa fechado (drawer); no desktop, aberto.
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 900)
   const location = useLocation()
   const navigate = useNavigate()
+
+  // Fecha o menu ao trocar de página (importante no celular).
+  useEffect(() => {
+    setSidebarOpen(window.innerWidth > 900)
+  }, [location.pathname])
 
   const navigation = [
     { path: '/pdv', label: 'PDV', icon: '🛒', roles: ['admin', 'responsavel', 'atendente'] },
@@ -38,10 +44,10 @@ const AppLayout = () => {
   return (
     <div className="app-layout">
       {/* Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? '' : 'collapsed'}`} style={{ 
-        width: sidebarOpen ? '260px' : '72px',
-        transition: 'width var(--transition-normal)',
-      }}>
+      <aside
+        className={`sidebar ${sidebarOpen ? 'is-open' : 'is-collapsed'}`}
+        aria-label="Menu lateral"
+      >
         <div className="sidebar-header" style={{ padding: sidebarOpen ? 'var(--space-5)' : 'var(--space-4)', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
           <div className="sidebar-logo" style={{ flexShrink: 0 }}>🥥</div>
           {sidebarOpen && <span className="sidebar-title">Quiosque do Coco</span>}
@@ -95,11 +101,15 @@ const AppLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <div className="main-content" style={{ 
-        marginLeft: sidebarOpen ? '260px' : '72px',
-        transition: 'margin-left var(--transition-normal)',
-        minHeight: '100vh',
-      }}>
+      {sidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <div className="main-content">
         <header className="header">
           <div className="header-inner">
             <div className="header-left">
@@ -115,7 +125,7 @@ const AppLayout = () => {
             <div className="header-right">
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
                 <Avatar name={user?.name} size="sm" />
-                {sidebarOpen && <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>{user?.name}</span>}
+                <span className="header-user-name">{user?.name}</span>
               </div>
             </div>
           </div>

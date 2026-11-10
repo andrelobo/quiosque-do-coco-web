@@ -1832,6 +1832,147 @@ a:hover {
 }
 
 /* ========================================
+   Layout responsivo (celular e tablet)
+   ======================================== */
+
+.main-content {
+  min-width: 0;
+}
+
+/* Desktop: sidebar fixa na coluna, recolhida mostra só os ícones */
+.sidebar.is-open {
+  width: 260px;
+}
+
+.sidebar.is-collapsed {
+  width: 72px;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .app-layout {
+    min-height: 100dvh;
+  }
+
+  /* Sidebar vira gaveta (drawer) que desliza por cima do conteúdo */
+  .sidebar,
+  .sidebar.is-open,
+  .sidebar.is-collapsed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100dvh;
+    width: min(84vw, 300px);
+    max-width: 320px;
+    z-index: 1000;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-xl);
+    transition: transform var(--transition-normal);
+  }
+
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .sidebar.is-collapsed .sidebar-nav,
+  .sidebar.is-collapsed .sidebar-footer {
+    display: flex;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 25, 23, 0.45);
+    z-index: 999;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: var(--space-4);
+  }
+
+  .header-inner {
+    height: 56px;
+    padding: 0 var(--space-4);
+    gap: var(--space-2);
+  }
+
+  .header-title {
+    font-size: var(--text-lg);
+  }
+
+  .header-user-name {
+    display: none;
+  }
+
+  .page-header {
+    gap: var(--space-3);
+  }
+
+  .page-title {
+    font-size: var(--text-2xl);
+  }
+
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sm\:grid-cols-1 {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+}
+
+/* ========================================
    Print Styles
    ======================================== */
 
