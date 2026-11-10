@@ -57,7 +57,7 @@ export const Orders = () => {
     try {
       const status = activeTab !== 'all' ? activeTab : undefined
       // A API responde paginado: { data, total, page, limit, totalPages }.
-      const res = await api.get<any>(`/orders?status=${status || ''}&page=${page}&limit=${pageSize}`)
+      const res = await api.get<any>(`/orders?status=${status || ''}&page=${page}&limit=${pageSize}&search=${searchTerm}`)
       const list: Order[] = Array.isArray(res) ? res : (res?.data ?? [])
       setOrders(list)
       setTotalPages(Array.isArray(res) ? Math.ceil(list.length / pageSize) || 1 : (res?.totalPages || 1))
