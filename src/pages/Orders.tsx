@@ -56,9 +56,11 @@ export const Orders = () => {
   const loadOrders = useCallback(async () => {
     try {
       const status = activeTab !== 'all' ? activeTab : undefined
-      const data = await api.get<Order[]>(`/orders?status=${status || ''}&page=${page}&limit=${pageSize}`)
-      setOrders(data)
-      setTotalPages(Math.ceil(data.length / pageSize) || 1)
+      // A API responde paginado: { data, total, page, limit, totalPages }.
+      const res = await api.get<any>(`/orders?status=${status || ''}&page=${page}&limit=${pageSize}`)
+      const list: Order[] = Array.isArray(res) ? res : (res?.data ?? [])
+      setOrders(list)
+      setTotalPages(Array.isArray(res) ? Math.ceil(list.length / pageSize) || 1 : (res?.totalPages || 1))
     } catch (err: any) {
       showError('Erro ao carregar pedidos', err.message)
     } finally {
