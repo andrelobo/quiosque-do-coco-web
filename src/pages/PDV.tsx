@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { api, formatCurrency, getCategoryLabel } from '../lib/api'
+import { api, formatCurrency, formatReais, getCategoryLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Badge, StatusBadge } from '../components/Badge'
 import { Modal, ConfirmModal } from '../components/Modal'
@@ -166,7 +166,7 @@ export const PDV = () => {
   // Cálculos do pedido
   const subtotal = orderItems.reduce((sum, item) => sum + item.unitPriceCents * item.qty, 0)
   const change = selectedPayment === 'dinheiro' && cashReceived 
-    ? Math.max(0, parseInt(cashReceived) * 100 - subtotal) 
+    ? Math.max(0, parseFloat(cashReceived) - subtotal) 
     : 0
   const canSubmit = orderItems.length > 0 && orderStatus === 'editing'
   const canPay = orderItems.length > 0 && orderStatus === 'awaiting_payment'
@@ -330,16 +330,16 @@ export const PDV = () => {
 
   // Abrir turno
   const openShift = async () => {
-    const initialCash = prompt('Valor do fundo inicial (em centavos):', '10000')
+    const initialCash = prompt('Valor do fundo inicial (R$):', '100.00')
     if (!initialCash) return
     
     const productIds = products.filter(p => p.active).map(p => p.id)
     try {
       await api.post('/shifts/open', {
-        initialCashCents: parseInt(initialCash),
+        initialCash: parseFloat(initialCash), // agora envia Reais
         productIds,
       })
-      success('Turno aberto', `Fundo inicial: ${formatCurrency(parseInt(initialCash))}`)
+      success('Turno aberto', `Fundo inicial: ${formatReais(parseFloat(initialCash))}`)
       loadData()
     } catch (err: any) {
       showError('Erro ao abrir turno', err.message)
@@ -388,7 +388,7 @@ export const PDV = () => {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <span className="badge badge-primary">Fundo: {formatCurrency(shift.initialCashCents)}</span>
+            <span className="badge badge-primary">Fundo: {formatReais(shift.initialCashCents)}</span>
             {hasRole('admin', 'responsavel') && (
               <Button variant="ghost" size="sm" onClick={openShift}>
                 Novo Turno
@@ -453,13 +453,13 @@ export const PDV = () => {
                 onClick={() => addProduct(product)}
                 disabled={!product.active || (product.trackStock && product.availableQty <= 0) || orderStatus !== 'editing'}
                 role="listitem"
-                aria-label={`${product.name} - ${formatCurrency(product.priceCents)}${product.trackStock ? ` (${product.availableQty} disp.)` : ''}`}
+                aria-label={`${product.name} - ${formatReais(product.priceCents)}${product.trackStock ? ` (${product.availableQty} disp.)` : ''}`}
               >
                 <div className="pdv-product-icon" aria-hidden="true">
                   {CATEGORY_ICONS[product.category] || '📦'}
                 </div>
                 <div className="pdv-product-name">{product.name}</div>
-                <div className="pdv-product-price">{formatCurrency(product.priceCents)}</div>
+                <div className="pdv-product-price">{formatReais(product.priceCents)}</div>
                 {product.trackStock && (
                   <span className="pdv-product-badge badge badge-neutral">
                     {product.availableQty} disp.
@@ -512,7 +512,7 @@ export const PDV = () => {
                     <span className="pdv-qty-value">{item.qty}</span>
                     <button className="pdv-qty-btn" onClick={() => updateQty(item.product, 1)} disabled={item.trackStock && available <= item.qty} aria-label="Aumentar quantidade">+</button>
                   </div>
-                  <div className="pdv-order-item-price">{formatCurrency(item.unitPriceCents * item.qty)}</div>
+                  <div className="pdv-order-item-price">{formatReais(item.unitPriceCents * item.qty)}</div>
                   <button className="pdv-order-item-remove" onClick={() => removeItem(item.product)} aria-label="Remover item">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3 6 5 6 21 6" />
@@ -529,11 +529,11 @@ export const PDV = () => {
         <div className="pdv-order-summary">
           <div className="pdv-summary-row">
             <span>Subtotal ({orderItems.reduce((s, i) => s + i.qty, 0)} itens)</span>
-            <span>{formatCurrency(subtotal)}</span>
+            <span>{formatReais(subtotal)}</span>
           </div>
           <div className="pdv-summary-row total">
             <span>Total</span>
-            <span>{formatCurrency(subtotal)}</span>
+            <span>{formatReais(subtotal)}</span>
           </div>
         </div>
 
@@ -577,7 +577,7 @@ export const PDV = () => {
                   value={cashReceived}
                   onChange={e => setCashReceived(e.target.value)}
                   placeholder="Ex: 20.00"
-                  hint={`Troco: ${formatCurrency(change)}`}
+                  hint={`Troco: ${formatReais(change)}`}
                 />
               </div>
             )}
@@ -639,7 +639,7 @@ export const PDV = () => {
                 disabled={submitting || !canSubmit}
                 className="pdv-action-btn primary"
               >
-                {submitting ? 'Enviando...' : `Pagar ${formatCurrency(subtotal)}`}
+                {submitting ? 'Enviando...' : `Pagar ${formatReais(subtotal)}`}
               </Button>
             </>
           ) : orderStatus === 'awaiting_payment' ? (

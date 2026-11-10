@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { api, formatCurrency, formatDateTime, getStatusLabel } from '../lib/api'
+import { api, formatCurrency, formatReais, formatDateTime, getStatusLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Card, CardHeader, CardBody, CardFooter } from '../components/Card'
@@ -103,10 +103,10 @@ export const Shifts = () => {
     try {
       const productIds = (await api.get<any[]>('/products?includeInactive=false')).map(p => p.id)
       await api.post('/shifts/open', {
-        initialCashCents: parseInt(formData.initialCashCents),
+        initialCash: parseFloat(formData.initialCashCents), // agora envia Reais
         productIds,
       })
-      success('Turno aberto', `Fundo inicial: ${formatCurrency(parseInt(formData.initialCashCents))}`)
+      success('Turno aberto', `Fundo inicial: ${formatReais(parseFloat(formData.initialCashCents))}`)
       setFormData({ initialCashCents: '', countedCashCents: '', closingNotes: '' })
       setModalOpen(false)
       loadShifts()
@@ -132,7 +132,7 @@ export const Shifts = () => {
     setSubmitting(true)
     try {
       await api.post(`/shifts/${selectedShift.id}/close`, {
-        countedCashCents: parseInt(formData.countedCashCents),
+        countedCash: parseFloat(formData.countedCashCents), // agora envia Reais
         closingNotes: formData.closingNotes || undefined,
       })
       success('Turno fechado', 'Fechamento realizado com sucesso')
@@ -170,11 +170,11 @@ export const Shifts = () => {
     )},
     { key: 'openedAt', header: 'Abertura', render: (s: Shift) => formatDateTime(s.openedAt) },
     { key: 'closedAt', header: 'Fechamento', render: (s: Shift) => s.closedAt ? formatDateTime(s.closedAt) : <span style={{ color: 'var(--color-text-muted)' }}>—</span> },
-    { key: 'initialCashCents', header: 'Fundo Inicial', render: (s: Shift) => formatCurrency(s.initialCashCents) },
+    { key: 'initialCashCents', header: 'Fundo Inicial', render: (s: Shift) => formatReais(s.initialCashCents) },
     { key: 'differenceCents', header: 'Diferença', render: (s: Shift) => 
       s.differenceCents !== undefined ? (
         <span style={{ color: s.differenceCents >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 'var(--font-semibold)' }}>
-          {s.differenceCents >= 0 ? '+' : ''}{formatCurrency(s.differenceCents)}
+          {s.differenceCents >= 0 ? '+' : ''}{formatReais(s.differenceCents)}
         </span>
       ) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>
     },
@@ -224,7 +224,7 @@ export const Shifts = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Fundo Inicial</div>
-                  <div style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-lg)' }}>{formatCurrency(currentShift.initialCashCents)}</div>
+                  <div style={{ fontWeight: 'var(--font-bold)', fontSize: 'var(--text-lg)' }}>{formatReais(currentShift.initialCashCents)}</div>
                 </div>
                 <StatusBadge status={currentShift.status} />
               </div>
@@ -303,15 +303,15 @@ export const Shifts = () => {
         {modalMode === 'open' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <Input
-              label="Fundo Inicial (centavos)"
+              label="Fundo Inicial (R$)"
               type="number"
               min="0"
-              step="1"
+              step="0.01"
               value={formData.initialCashCents}
               onChange={e => setFormData(prev => ({ ...prev, initialCashCents: e.target.value }))}
-              placeholder="Ex: 10000 (R$ 100,00)"
+              placeholder="Ex: 100.00"
               required
-              hint="Valor em centavos que estará no caixa no início do turno"
+              hint="Valor em Reais que estará no caixa no início do turno"
             />
             <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' }}>
               <strong>Produtos que serão ativados:</strong> Todos os produtos ativos serão disponibilizados automaticamente.
@@ -321,22 +321,22 @@ export const Shifts = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
             <div style={{ padding: 'var(--space-4)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Fundo Inicial</span><br/><strong>{formatCurrency(selectedShift?.initialCashCents || 0)}</strong></div>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Esperado em Dinheiro</span><br/><strong>{formatCurrency(selectedShift?.expectedCashCents || 0)}</strong></div>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Pix</span><br/><strong>{formatCurrency(0)}</strong></div>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Cartão</span><br/><strong>{formatCurrency(0)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Fundo Inicial</span><br/><strong>{formatReais(selectedShift?.initialCashCents || 0)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Esperado em Dinheiro</span><br/><strong>{formatReais(selectedShift?.expectedCashCents || 0)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Pix</span><br/><strong>{formatReais(0)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Cartão</span><br/><strong>{formatReais(0)}</strong></div>
               </div>
             </div>
             <Input
-              label="Dinheiro Contado (centavos)"
+              label="Dinheiro Contado (R$)"
               type="number"
               min="0"
-              step="1"
+              step="0.01"
               value={formData.countedCashCents}
               onChange={e => setFormData(prev => ({ ...prev, countedCashCents: e.target.value }))}
-              placeholder="Ex: 15000 (R$ 150,00)"
+              placeholder="Ex: 150.00"
               required
-              hint="Conte o dinheiro físico no caixa e informe o total em centavos"
+              hint="Conte o dinheiro físico no caixa e informe o total em Reais"
             />
             <Input
               label="Observações (opcional)"
@@ -348,8 +348,8 @@ export const Shifts = () => {
             {selectedShift && (
               <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' }}>
                 <strong>Diferença projetada:</strong>{' '}
-                <span style={{ color: ((parseInt(formData.countedCashCents || '0') - (selectedShift?.expectedCashCents || 0)) >= 0 ? 'var(--color-success)' : 'var(--color-danger)'), fontWeight: 'var(--font-bold)' }}>
-                  {formatCurrency(parseInt(formData.countedCashCents || '0') - (selectedShift?.expectedCashCents || 0))}
+                <span style={{ color: ((parseFloat(formData.countedCashCents || '0') - (selectedShift?.expectedCashCents || 0)) >= 0 ? 'var(--color-success)' : 'var(--color-danger)'), fontWeight: 'var(--font-bold)' }}>
+                  {formatReais(parseFloat(formData.countedCashCents || '0') - (selectedShift?.expectedCashCents || 0))}
                 </span>
               </div>
             )}

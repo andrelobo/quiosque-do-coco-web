@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { api, formatCurrency, formatDateTime, getStatusLabel, getPaymentMethodLabel } from '../lib/api'
+import { api, formatReais, formatDateTime, getStatusLabel, getPaymentMethodLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Card, CardHeader, CardBody, CardFooter } from '../components/Card'
@@ -165,7 +165,7 @@ export const Orders = () => {
         )}
       </div>
     )},
-    { key: 'total', header: 'Total', render: (o: Order) => <strong>{formatCurrency(o.totalCents)}</strong> },
+    { key: 'total', header: 'Total', render: (o: Order) => <strong>{formatReais(o.totalCents)}</strong> },
     { key: 'status', header: 'Status', render: (o: Order) => <StatusBadge status={o.status} /> },
     { key: 'shift', header: 'Turno', render: (o: Order) => <Badge variant="primary" size="sm">#{o.shift.number}</Badge> },
     { key: 'createdBy', header: 'Atendente', render: (o: Order) => o.createdBy?.name || '—' },
@@ -282,7 +282,7 @@ export const Orders = () => {
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Total</div>
                 <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-primary)' }}>
-                  {formatCurrency(selectedOrder.totalCents)}
+                  {formatReais(selectedOrder.totalCents)}
                 </div>
               </div>
             </div>
@@ -302,8 +302,8 @@ export const Orders = () => {
                       </div>
                     )},
                     { key: 'qty', header: 'Qtd', render: (i: any) => <span style={{ fontWeight: 'var(--font-medium)' }}>{i.qty}</span> },
-                    { key: 'unitPrice', header: 'Preço Unit.', render: (i: any) => formatCurrency(i.unitPriceCents) },
-                    { key: 'total', header: 'Total', render: (i: any) => <strong>{formatCurrency(i.unitPriceCents * i.qty)}</strong> },
+                    { key: 'unitPrice', header: 'Preço Unit.', render: (i: any) => formatReais(i.unitPriceCents) },
+                    { key: 'total', header: 'Total', render: (i: any) => <strong>{formatReais(i.unitPriceCents * i.qty)}</strong> },
                   ]}
                   data={selectedOrder.items}
                   keyExtractor={(_, i) => String(i)}
@@ -327,9 +327,9 @@ export const Orders = () => {
                           {p.cardType && ` (${p.cardType})`}
                         </Badge>
                       )},
-                      { key: 'amountCents', header: 'Valor', render: (p: any) => <strong>{formatCurrency(p.amountCents)}</strong> },
-                      { key: 'receivedCents', header: 'Recebido', render: (p: any) => p.method === 'dinheiro' ? formatCurrency(p.receivedCents) : '—' },
-                      { key: 'changeCents', header: 'Troco', render: (p: any) => p.method === 'dinheiro' && p.changeCents > 0 ? formatCurrency(p.changeCents) : '—' },
+                      { key: 'amountCents', header: 'Valor', render: (p: any) => <strong>{formatReais(p.amountCents)}</strong> },
+                      { key: 'receivedCents', header: 'Recebido', render: (p: any) => p.method === 'dinheiro' ? formatReais(p.receivedCents) : '—' },
+                      { key: 'changeCents', header: 'Troco', render: (p: any) => p.method === 'dinheiro' && p.changeCents > 0 ? formatReais(p.changeCents) : '—' },
                       { key: 'status', header: 'Status', render: (p: any) => <StatusBadge status={p.status} /> },
                       { key: 'reference', header: 'Referência', render: (p: any) => p.reference || '—' },
                     ]}

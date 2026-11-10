@@ -58,6 +58,14 @@ export function formatCurrency(cents: number): string {
   }).format(cents / 100)
 }
 
+// Para valores que a API agora retorna em Reais (ex: 100.00 ao invés de 10000)
+export function formatReais(reais: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(reais)
+}
+
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',

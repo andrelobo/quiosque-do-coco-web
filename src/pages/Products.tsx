@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { api, formatCurrency, getCategoryLabel, getStatusLabel } from '../lib/api'
+import { api, formatCurrency, formatReais, getCategoryLabel, getStatusLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Select } from '../components/Select'
@@ -127,7 +127,7 @@ export const Products = () => {
       const data = {
         name: formData.name.trim(),
         category: formData.category,
-        priceCents: parseInt(formData.priceCents),
+        price: parseFloat(formData.priceCents), // agora envia Reais
         unit: formData.unit,
         active: formData.active,
         requiresPrep: formData.requiresPrep,
@@ -208,7 +208,7 @@ export const Products = () => {
         </div>
       </div>
     )},
-    { key: 'priceCents', header: 'Preço', render: (p: Product) => <strong>{formatCurrency(p.priceCents)}</strong> },
+    { key: 'priceCents', header: 'Preço', render: (p: Product) => <strong>{formatReais(p.priceCents)}</strong> },
     { key: 'stock', header: 'Estoque', render: (p: Product) => p.trackStock ? (
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
         <span style={{ fontWeight: 'var(--font-medium)' }}>
@@ -348,13 +348,13 @@ export const Products = () => {
             onChange={e => setFormData(prev => ({ ...prev, category: e.target.value }))}
           />
           <Input
-            label="Preço (centavos) *"
+            label="Preço (R$) *"
             type="number"
             min="0"
-            step="1"
+            step="0.01"
             value={formData.priceCents}
             onChange={e => setFormData(prev => ({ ...prev, priceCents: e.target.value }))}
-            placeholder="Ex: 800 (R$ 8,00)"
+            placeholder="Ex: 8.00"
             required
           />
           <Input

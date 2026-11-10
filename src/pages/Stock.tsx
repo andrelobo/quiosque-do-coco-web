@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { api, formatCurrency, getStockMovementLabel } from '../lib/api'
+import { api, formatReais, getStockMovementLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Card, CardHeader, CardBody, CardFooter } from '../components/Card'
@@ -150,7 +150,7 @@ export const Stock = () => {
         <Badge variant={p.active ? 'success' : 'danger'} size="sm">{p.active ? 'Ativo' : 'Inativo'}</Badge>
       </div>
     )},
-    { key: 'price', header: 'Preço', render: (p: Product) => formatCurrency(p.priceCents) },
+    { key: 'price', header: 'Preço', render: (p: Product) => formatReais(p.priceCents) },
     { key: 'actions', header: 'Ações', render: (p: Product) => (
       <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
         <Button variant="outline" size="sm" onClick={() => openAdjustModal(p.id)} disabled={!p.active}>

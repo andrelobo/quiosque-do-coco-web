@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { api, formatCurrency, formatDate, getStatusLabel, getPaymentMethodLabel } from '../lib/api'
+import { api, formatCurrency, formatReais, formatDate, getStatusLabel, getPaymentMethodLabel } from '../lib/api'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Select } from '../components/Select'
@@ -167,7 +167,7 @@ export const Reports = () => {
           <Card>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Valor Total</div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatCurrency(totalValue)}</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatReais(totalValue)}</div>
             </CardBody>
           </Card>
         </div>
@@ -177,7 +177,7 @@ export const Reports = () => {
             { key: 'shift', header: 'Turno', render: (d: any) => `#${d._id.shift}` },
             { key: 'orderCount', header: 'Pedidos', render: (d: any) => d.orderCount },
             { key: 'itemsSold', header: 'Itens', render: (d: any) => d.itemsSold },
-            { key: 'totalValue', header: 'Valor', render: (d: any) => <strong>{formatCurrency(d.totalValue)}</strong> },
+            { key: 'totalValue', header: 'Valor', render: (d: any) => <strong>{formatReais(d.totalValue)}</strong> },
           ]}
           data={data}
           keyExtractor={d => `${d._id.date}-${d._id.shift}`}
@@ -205,7 +205,7 @@ export const Reports = () => {
           <Card>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Valor Total</div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatCurrency(totalValue)}</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatReais(totalValue)}</div>
             </CardBody>
           </Card>
         </div>
@@ -213,8 +213,8 @@ export const Reports = () => {
           columns={[
             { key: 'name', header: 'Produto', render: (d: any) => d.name },
             { key: 'qty', header: 'Qtd', render: (d: any) => d.qty },
-            { key: 'totalValue', header: 'Valor Total', render: (d: any) => <strong>{formatCurrency(d.totalValue)}</strong> },
-            { key: 'avg', header: 'Preço Médio', render: (d: any) => formatCurrency(Math.round(d.totalValue / d.qty)) },
+            { key: 'totalValue', header: 'Valor Total', render: (d: any) => <strong>{formatReais(d.totalValue)}</strong> },
+            { key: 'avg', header: 'Preço Médio', render: (d: any) => formatReais(Math.round(d.totalValue / d.qty)) },
           ]}
           data={data}
           keyExtractor={d => d._id}
@@ -242,7 +242,7 @@ export const Reports = () => {
           <Card>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Valor Total</div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatCurrency(totalValue)}</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatReais(totalValue)}</div>
             </CardBody>
           </Card>
         </div>
@@ -254,8 +254,8 @@ export const Reports = () => {
               </div>
             )},
             { key: 'count', header: 'Qtd', render: (d: any) => d.count },
-            { key: 'totalValue', header: 'Valor Total', render: (d: any) => <strong>{formatCurrency(d.totalValue)}</strong> },
-            { key: 'avg', header: 'Ticket Médio', render: (d: any) => formatCurrency(Math.round(d.totalValue / d.count)) },
+            { key: 'totalValue', header: 'Valor Total', render: (d: any) => <strong>{formatReais(d.totalValue)}</strong> },
+            { key: 'avg', header: 'Ticket Médio', render: (d: any) => formatReais(Math.round(d.totalValue / d.count)) },
           ]}
           data={data}
           keyExtractor={d => d._id}
@@ -277,31 +277,31 @@ export const Reports = () => {
           <Card style={{ borderLeft: '4px solid var(--color-primary)' }}>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Fundo Inicial</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' }}>{formatCurrency(d.initialCashCents)}</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)' }}>{formatReais(d.initialCashCents)}</div>
             </CardBody>
           </Card>
           <Card style={{ borderLeft: '4px solid var(--color-success)' }}>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Recebimentos (Dinheiro)</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatCurrency(d.cashReceivedCents)}</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success)' }}>{formatReais(d.cashReceivedCents)}</div>
             </CardBody>
           </Card>
           <Card style={{ borderLeft: '4px solid var(--color-warning)' }}>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Reforços</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-warning)' }}>{formatCurrency(d.reforcosCents)}</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-warning)' }}>{formatReais(d.reforcosCents)}</div>
             </CardBody>
           </Card>
           <Card style={{ borderLeft: '4px solid var(--color-danger)' }}>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Retiradas</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-danger)' }}>{formatCurrency(d.retiradasCents)}</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-danger)' }}>{formatReais(d.retiradasCents)}</div>
             </CardBody>
           </Card>
           <Card style={{ borderLeft: '4px solid var(--color-accent)' }}>
             <CardBody>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Devoluções (Dinheiro)</div>
-              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-accent)' }}>{formatCurrency(d.cashRefundedCents)}</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-accent)' }}>{formatReais(d.cashRefundedCents)}</div>
             </CardBody>
           </Card>
         </div>
@@ -309,20 +309,20 @@ export const Reports = () => {
           <Card style={{ background: 'var(--color-bg-subtle)' }}>
             <CardBody style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Esperado em Caixa</div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-primary)' }}>{formatCurrency(d.expectedCashCents)}</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-primary)' }}>{formatReais(d.expectedCashCents)}</div>
             </CardBody>
           </Card>
           <Card style={{ background: 'var(--color-bg-subtle)' }}>
             <CardBody style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Contado</div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>{formatCurrency(d.countedCashCents)}</div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>{formatReais(d.countedCashCents)}</div>
             </CardBody>
           </Card>
           <Card style={{ background: d.differenceCents >= 0 ? 'var(--color-success-light)' : 'var(--color-danger-light)' }}>
             <CardBody style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>Diferença</div>
               <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)', color: diffColor }}>
-                {d.differenceCents >= 0 ? '+' : ''}{formatCurrency(d.differenceCents)}
+                {d.differenceCents >= 0 ? '+' : ''}{formatReais(d.differenceCents)}
               </div>
             </CardBody>
           </Card>
@@ -339,7 +339,7 @@ export const Reports = () => {
         columns={[
           { key: 'code', header: 'Pedido', render: (d: any) => `#${d.dayKey}-${d.code}` },
           { key: 'items', header: 'Itens', render: (d: any) => d.items.map((i: any) => `${i.name} (${i.qty})`).join(', ') },
-          { key: 'totalCents', header: 'Valor', render: (d: any) => <strong>{formatCurrency(d.totalCents)}</strong> },
+          { key: 'totalCents', header: 'Valor', render: (d: any) => <strong>{formatReais(d.totalCents)}</strong> },
           { key: 'status', header: 'Status', render: (d: any) => <StatusBadge status={d.status} /> },
           { key: 'pickupName', header: 'Retirada', render: (d: any) => d.pickupName || <span style={{ color: 'var(--color-text-muted)' }}>—</span> },
           { key: 'createdAt', header: 'Criado em', render: (d: any) => formatDate(d.createdAt) },
@@ -391,7 +391,7 @@ export const Reports = () => {
               <Table
                 columns={[
                   { key: 'order', header: 'Pedido', render: (d: any) => d.order ? `#${d.order.dayKey}-${d.order.code}` : '—' },
-                  { key: 'amountCents', header: 'Valor', render: (d: any) => <strong>{formatCurrency(d.amountCents)}</strong> },
+                  { key: 'amountCents', header: 'Valor', render: (d: any) => <strong>{formatReais(d.amountCents)}</strong> },
                   { key: 'method', header: 'Modalidade', render: (d: any) => <Badge variant="primary" size="sm">{getPaymentMethodLabel(d.method)}</Badge> },
                   { key: 'status', header: 'Status', render: (d: any) => <StatusBadge status={d.status} /> },
                   { key: 'reason', header: 'Motivo', render: (d: any) => d.reason || '—' },
