@@ -103,6 +103,7 @@ export const PDV = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([])
   const [pickupName, setPickupName] = useState('')
   const [orderStatus, setOrderStatus] = useState<'editing' | 'awaiting_payment' | 'paid'>('editing')
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null)
   const [cashReceived, setCashReceived] = useState('')
   const [cardType, setCardType] = useState<'debito' | 'credito'>('debito')
@@ -168,8 +169,8 @@ export const PDV = () => {
   const change = selectedPayment === 'dinheiro' && cashReceived 
     ? Math.max(0, parseFloat(cashReceived) - subtotal) 
     : 0
-  const canSubmit = orderItems.length > 0 && orderStatus === 'editing'
-  const canPay = orderItems.length > 0 && orderStatus === 'awaiting_payment'
+  const canSubmit = orderItems.length > 0 && orderStatus === 'editing' && !!selectedPayment
+  const canPay = orderItems.length > 0 && orderStatus === 'awaiting_payment' && !!currentOrderId
 
   // Adicionar produto ao pedido
   const addProduct = (product: Product) => {
@@ -218,12 +219,25 @@ export const PDV = () => {
     setOrderItems(prev => prev.filter(i => i.product !== productId))
   }
 
-  // Enviar para pagamento
+  // Limpa o pedido em andamento (após pagamento ou cancelamento)
+  const resetOrder = () => {
+    setOrderItems([])
+    setPickupName('')
+    setOrderStatus('editing')
+    setSelectedPayment(null)
+    setCashReceived('')
+    setPixReference('')
+    setCardType('debito')
+    setCurrentOrderId(null)
+    setPaymentModalOpen(false)
+  }
+
+  // Enviar para pagamento: cria o pedido e reserva o estoque
   const submitForPayment = async () => {
-    if (!shift || orderItems.length === 0) return
+    if (!shift || orderItems.length === 0 || !selectedPayment) return
     setSubmitting(true)
     try {
-      await api.post('/orders', {
+      const order = await api.post<Order>('/orders', {
         shiftId: shift.id,
         items: orderItems.map(i => ({
           productId: i.product,
@@ -232,12 +246,11 @@ export const PDV = () => {
         })),
         pickupName: pickupName || undefined,
       })
+      setCurrentOrderId(order.id)
+      // Reserva o estoque e muda o pedido para "aguardando pagamento".
+      await api.post(`/orders/${order.id}/submit`, {})
       success('Pedido enviado', 'Aguardando confirmação de pagamento')
       setOrderStatus('awaiting_payment')
-      setSelectedPayment(null)
-      setCashReceived('')
-      setPixReference('')
-      setCardType('debito')
     } catch (err: any) {
       showError('Erro ao enviar pedido', err.message)
     } finally {
@@ -245,55 +258,34 @@ export const PDV = () => {
     }
   }
 
-  // Confirmar pagamento
+  // Confirmar pagamento do pedido já criado/reservado
   const confirmPayment = async () => {
-    if (!shift || !selectedPayment || orderItems.length === 0) return
+    if (!shift || !selectedPayment || orderItems.length === 0 || !currentOrderId) return
     setSubmitting(true)
     try {
-      const orderResponse = await api.post<Order>('/orders', {
-        shiftId: shift.id,
-        items: orderItems.map(i => ({
-          productId: i.product,
-          qty: i.qty,
-          note: i.note,
-        })),
-        pickupName: pickupName || undefined,
-      })
-
-      let receivedCents = subtotal
-      if (selectedPayment === 'dinheiro' && cashReceived) {
-        receivedCents = parseInt(cashReceived) * 100
-      }
+      const received = selectedPayment === 'dinheiro' && cashReceived
+        ? parseFloat(cashReceived)
+        : subtotal
 
       await api.post('/payments', {
-        orderId: orderResponse.id,
+        orderId: currentOrderId,
         shiftId: shift.id,
         method: selectedPayment,
-        amountCents: subtotal,
-        receivedCents,
+        amount: subtotal,
+        received,
         cardType: selectedPayment === 'cartao' ? cardType : undefined,
         reference: selectedPayment === 'pix' ? pixReference : undefined,
       })
 
-      // Confirmar pagamento
-      const payments = await api.get<Payment[]>(`/payments/order/${orderResponse.id}`)
+      // Confirmar pagamento (libera o pedido para preparo/entrega)
+      const payments = await api.get<Payment[]>(`/payments/order/${currentOrderId}`)
       const pendingPayment = payments.find(p => p.status === 'pendente')
-      if (pendingPayment) {
-        await api.patch(`/payments/${pendingPayment.id}/confirm`, {})
-      }
+      if (!pendingPayment) throw new Error('Pagamento pendente não encontrado')
+      await api.patch(`/payments/${pendingPayment.id}/confirm`, {})
 
       success('Pagamento confirmado', 'Pedido liberado para preparo/entrega')
-      
-      // Resetar formulário
-      setOrderItems([])
-      setPickupName('')
-      setOrderStatus('editing')
-      setSelectedPayment(null)
-      setCashReceived('')
-      setPixReference('')
-      setCardType('debito')
-      setPaymentModalOpen(false)
-      
+      resetOrder()
+
       // Recarregar turno
       loadData()
     } catch (err: any) {
@@ -308,19 +300,37 @@ export const PDV = () => {
     setConfirmCancelOpen(true)
   }
 
-  const confirmCancel = async () => {
+  // Voltar para edição: cancela o pedido já reservado e libera o estoque
+  const backToEditing = async () => {
+    if (!currentOrderId) {
+      setOrderStatus('editing')
+      return
+    }
     setSubmitting(true)
     try {
-      // Como o pedido ainda não foi salvo (status editing), apenas limpar
-      setOrderItems([])
-      setPickupName('')
-      setOrderStatus('editing')
-      setSelectedPayment(null)
-      setCashReceived('')
-      setPixReference('')
-      setCardType('debito')
+      await api.post(`/orders/${currentOrderId}/cancel`, {
+        reason: 'Operador voltou para editar o pedido',
+      })
+      resetOrder()
+    } catch (err: any) {
+      showError('Erro ao voltar para edição', err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const confirmCancel = async () => {
+    setSubmitting(true)
+    const orderId = currentOrderId
+    try {
+      if (orderId) {
+        await api.post(`/orders/${orderId}/cancel`, {
+          reason: 'Cancelado pelo operador antes do pagamento',
+        })
+      }
+      resetOrder()
       setConfirmCancelOpen(false)
-      success('Pedido cancelado', 'Itens removidos')
+      success('Pedido cancelado', orderId ? 'Reserva de estoque liberada' : 'Itens removidos')
     } catch (err: any) {
       showError('Erro ao cancelar', err.message)
     } finally {
@@ -573,7 +583,7 @@ export const PDV = () => {
                   label="Valor Recebido"
                   type="number"
                   step="0.01"
-                  min={subtotal / 100}
+                  min={subtotal}
                   value={cashReceived}
                   onChange={e => setCashReceived(e.target.value)}
                   placeholder="Ex: 20.00"
@@ -644,7 +654,7 @@ export const PDV = () => {
             </>
           ) : orderStatus === 'awaiting_payment' ? (
             <>
-              <Button variant="ghost" onClick={() => { setOrderStatus('editing'); setSelectedPayment(null); }} disabled={submitting}>
+              <Button variant="ghost" onClick={backToEditing} disabled={submitting}>
                 Voltar
               </Button>
               <Button 
@@ -658,7 +668,7 @@ export const PDV = () => {
               </Button>
             </>
           ) : (
-            <Button variant="primary" size="lg" onClick={() => { setOrderItems([]); setPickupName(''); setOrderStatus('editing'); }} className="pdv-action-btn primary">
+            <Button variant="primary" size="lg" onClick={resetOrder} className="pdv-action-btn primary">
               Novo Pedido
             </Button>
           )}
