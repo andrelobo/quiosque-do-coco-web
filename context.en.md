@@ -30,6 +30,11 @@ Pages: PDV (point-of-sale), Orders (order management), Products, Shifts, Stock, 
 - **Contract note**: currency fields keep the `*Cents` suffix in responses but carry reais (backend `CurrencyResponseInterceptor`).
 - **Validation**: `vite build` passes.
 
+## Orders payment recovery (2026-11-11)
+- Orders sent to payment without a payment record can now be confirmed from `/orders`.
+- The action checks `/payments/order/:orderId` and either confirms the pending payment or opens a modal to register the method (cash/change, Pix reference, card debit/credit) before confirming.
+- Fixes the `Nenhum pagamento registrado para este pedido` error; the backend confirmation remains the single source of truth.
+
 ## P1 Pending (outside P0)
 - Automated tests (unit/e2e).
 - `GET /shifts/current` may return `availability.product` as an id (older API) or as a full object (API PR #4); the PDV handles both formats.
