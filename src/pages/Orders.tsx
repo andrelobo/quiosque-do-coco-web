@@ -15,7 +15,7 @@ interface Order {
   id: string
   code: number
   dayKey: string
-  shift: { id: string; number: number } | string
+  shift?: { id: string; number: number } | string | null
   items: { name: string; qty: number; unitPriceCents: number; note?: string }[]
   totalCents: number
   status: string
@@ -32,9 +32,16 @@ const PAYMENT_METHODS = [
   { id: 'cartao', label: 'Cartão', icon: '💳' },
 ]
 
-// A API pode devolver o turno como id (string) ou populado ({ id, number }).
-const getShiftId = (order: Order) => (typeof order.shift === 'string' ? order.shift : order.shift.id)
-const getShiftNumber = (order: Order) => (typeof order.shift === 'string' ? null : order.shift.number)
+// A API pode devolver o turno como id (string), populado ({ id, number }) ou
+// null (pedidos antigos sem turno). Nunca assuma o formato.
+const getShiftId = (order: Order): string | null => {
+  if (!order.shift) return null
+  return typeof order.shift === 'string' ? order.shift : order.shift.id
+}
+const getShiftNumber = (order: Order): number | null => {
+  if (!order.shift || typeof order.shift === 'string') return null
+  return order.shift.number
+}
 
 const STATUS_TABS = [
   { id: 'all', label: 'Todos' },
@@ -144,6 +151,12 @@ export const Orders = () => {
     if (!paymentOrder) return
     const amount = paymentOrder.totalCents
     const received = parseFloat(cashReceived)
+    const shiftId = getShiftId(paymentOrder)
+
+    if (!shiftId) {
+      showError('Pedido sem turno', 'Não é possível registrar o pagamento sem um turno associado ao pedido.')
+      return
+    }
 
     if (paymentMethod === 'dinheiro' && (!Number.isFinite(received) || received < amount)) {
       showError('Valor recebido insuficiente', `Informe ao menos ${formatReais(amount)}`)
@@ -154,7 +167,7 @@ export const Orders = () => {
     try {
       const payment = await api.post<any>('/payments', {
         orderId: paymentOrder.id,
-        shiftId: getShiftId(paymentOrder),
+        shiftId,
         method: paymentMethod,
         amount,
         received: paymentMethod === 'dinheiro' ? received : undefined,
