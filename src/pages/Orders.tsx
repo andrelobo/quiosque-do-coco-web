@@ -26,6 +26,12 @@ interface Order {
   deliveredAt?: string
 }
 
+const PAYMENT_METHODS = [
+  { id: 'dinheiro', label: 'Dinheiro', icon: '💵' },
+  { id: 'pix', label: 'Pix', icon: '📱' },
+  { id: 'cartao', label: 'Cartão', icon: '💳' },
+]
+
 const STATUS_TABS = [
   { id: 'all', label: 'Todos' },
   { id: 'em_edicao', label: 'Em Edição' },
@@ -52,6 +58,12 @@ export const Orders = () => {
   const [orderPayments, setOrderPayments] = useState<any[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const [paymentOrder, setPaymentOrder] = useState<Order | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'pix' | 'cartao'>('dinheiro')
+  const [cashReceived, setCashReceived] = useState('')
+  const [cardType, setCardType] = useState<'debito' | 'credito'>('debito')
+  const [pixReference, setPixReference] = useState('')
 
   const loadOrders = useCallback(async () => {
     try {
@@ -84,6 +96,83 @@ export const Orders = () => {
     }
   }, [showError])
 
+  // Confirma o pagamento de um pedido aguardando pagamento. Se já existe
+  // pagamento pendente/confirmado, reaproveita; senão abre o modal para
+  // registrar a forma de pagamento (pedidos enviados sem pagamento).
+  const handleConfirmPayment = async (order: Order) => {
+    setActionLoading(order.id)
+    try {
+      const payments = await api.get<any[]>(`/payments/order/${order.id}`)
+      const pending = payments.find(p => p.status === 'pendente')
+      if (pending) {
+        await api.patch(`/payments/${pending.id}/confirm`, {})
+      } else if (payments.some(p => p.status === 'confirmado')) {
+        // Pagamento já confirmado, mas o pedido não foi liberado: idempotente.
+        await api.post(`/orders/${order.id}/confirm-payment`, {})
+      } else {
+        setPaymentOrder(order)
+        setPaymentMethod('dinheiro')
+        setCashReceived(String(order.totalCents))
+        setCardType('debito')
+        setPixReference('')
+        setPaymentModalOpen(true)
+        return
+      }
+
+      success('Pagamento confirmado', `Pedido #${order.dayKey}-${order.code}`)
+      loadOrders()
+      if (selectedOrder?.id === order.id) loadOrderDetails(order.id)
+    } catch (err: any) {
+      showError('Erro ao confirmar pagamento', err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const closePaymentModal = () => {
+    if (submitting) return
+    setPaymentModalOpen(false)
+    setPaymentOrder(null)
+    setPixReference('')
+  }
+
+  const submitPayment = async () => {
+    if (!paymentOrder) return
+    const amount = paymentOrder.totalCents
+    const received = parseFloat(cashReceived)
+
+    if (paymentMethod === 'dinheiro' && (!Number.isFinite(received) || received < amount)) {
+      showError('Valor recebido insuficiente', `Informe ao menos ${formatReais(amount)}`)
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const payment = await api.post<any>('/payments', {
+        orderId: paymentOrder.id,
+        shiftId: paymentOrder.shift.id,
+        method: paymentMethod,
+        amount,
+        received: paymentMethod === 'dinheiro' ? received : undefined,
+        cardType: paymentMethod === 'cartao' ? cardType : undefined,
+        reference: paymentMethod === 'pix' && pixReference.trim() ? pixReference.trim() : undefined,
+      })
+
+      await api.patch(`/payments/${payment.id}/confirm`, {})
+
+      success('Pagamento confirmado', `Pedido #${paymentOrder.dayKey}-${paymentOrder.code}`)
+      setPaymentModalOpen(false)
+      setPaymentOrder(null)
+      setPixReference('')
+      loadOrders()
+      if (selectedOrder?.id === paymentOrder.id) loadOrderDetails(paymentOrder.id)
+    } catch (err: any) {
+      showError('Erro ao confirmar pagamento', err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const handleAction = async (orderId: string, action: string) => {
     setActionLoading(orderId)
     try {
@@ -94,10 +183,6 @@ export const Orders = () => {
         case 'submit':
           endpoint = `/orders/${orderId}/submit`
           successMsg = 'Pedido enviado para pagamento'
-          break
-        case 'confirm-payment':
-          endpoint = `/orders/${orderId}/confirm-payment`
-          successMsg = 'Pagamento confirmado'
           break
         case 'prep':
           endpoint = `/orders/${orderId}/prep`
@@ -176,7 +261,7 @@ export const Orders = () => {
         items={[
           { label: 'Ver detalhes', onClick: () => loadOrderDetails(o.id), icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg> },
           { label: 'Enviar p/ pagamento', onClick: () => handleAction(o.id, 'submit'), disabled: o.status !== 'em_edicao' || actionLoading === o.id, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg> },
-          { label: 'Confirmar pagamento', onClick: () => handleAction(o.id, 'confirm-payment'), disabled: o.status !== 'aguardando_pagamento' || actionLoading === o.id, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg> },
+          { label: 'Confirmar pagamento', onClick: () => handleConfirmPayment(o), disabled: o.status !== 'aguardando_pagamento' || actionLoading === o.id, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg> },
           { label: 'Iniciar preparo', onClick: () => handleAction(o.id, 'prep'), disabled: o.status !== 'pago' || actionLoading === o.id, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" /><path d="M12 6v6l4 2" /></svg> },
           { label: 'Marcar pronto', onClick: () => handleAction(o.id, 'ready'), disabled: o.status !== 'em_preparo' || actionLoading === o.id, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg> },
           { label: 'Entregar', onClick: () => handleAction(o.id, 'deliver'), disabled: !['pago', 'em_preparo', 'pronto'].includes(o.status) || actionLoading === o.id, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg> },
@@ -356,6 +441,103 @@ export const Orders = () => {
                 </div>
               </CardBody>
             </Card>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal para registrar pagamento de pedido enviado sem pagamento */}
+      <Modal
+        isOpen={paymentModalOpen}
+        onClose={closePaymentModal}
+        title={paymentOrder ? `Registrar pagamento • #${paymentOrder.dayKey}-${paymentOrder.code}` : 'Registrar pagamento'}
+        size="sm"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+            <Button variant="ghost" onClick={closePaymentModal} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button variant="success" onClick={submitPayment} loading={submitting}>
+              Confirmar pagamento
+            </Button>
+          </div>
+        }
+      >
+        {paymentOrder && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>Total do pedido</span>
+              <strong style={{ fontSize: 'var(--text-xl)', color: 'var(--color-primary)' }}>
+                {formatReais(paymentOrder.totalCents)}
+              </strong>
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-2)' }}>
+                Forma de pagamento
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-2)' }}>
+                {PAYMENT_METHODS.map(method => (
+                  <Button
+                    key={method.id}
+                    type="button"
+                    variant={paymentMethod === method.id ? 'primary' : 'outline'}
+                    onClick={() => setPaymentMethod(method.id as typeof paymentMethod)}
+                    disabled={submitting}
+                  >
+                    <span aria-hidden="true">{method.icon}</span> {method.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {paymentMethod === 'dinheiro' && (
+              <Input
+                label="Valor recebido"
+                type="number"
+                step="0.01"
+                min={paymentOrder.totalCents}
+                value={cashReceived}
+                onChange={e => setCashReceived(e.target.value)}
+                hint={`Troco: ${formatReais(Math.max(0, (parseFloat(cashReceived) || 0) - paymentOrder.totalCents))}`}
+              />
+            )}
+
+            {paymentMethod === 'pix' && (
+              <Input
+                label="Referência/Comprovante (opcional)"
+                type="text"
+                value={pixReference}
+                onChange={e => setPixReference(e.target.value)}
+                placeholder="ID da transação ou observação"
+              />
+            )}
+
+            {paymentMethod === 'cartao' && (
+              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flex: 1, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="orderCardType"
+                    value="debito"
+                    checked={cardType === 'debito'}
+                    onChange={() => setCardType('debito')}
+                    style={{ accentColor: 'var(--color-primary)' }}
+                  />
+                  <span style={{ fontWeight: 'var(--font-medium)' }}>Débito</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flex: 1, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="orderCardType"
+                    value="credito"
+                    checked={cardType === 'credito'}
+                    onChange={() => setCardType('credito')}
+                    style={{ accentColor: 'var(--color-primary)' }}
+                  />
+                  <span style={{ fontWeight: 'var(--font-medium)' }}>Crédito</span>
+                </label>
+              </div>
+            )}
           </div>
         )}
       </Modal>

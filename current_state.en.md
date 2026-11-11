@@ -36,6 +36,14 @@
 - Money inputs are in reais and go to the API as reais (`amount`/`received` are converted to cents by the backend pipe).
 - PDV accepts `shift.availability[].product` as either an id (older API) or a populated object (API PR #4), keeping deploys safe in both orders.
 
+## Front State (Orders)
+- "Confirmar pagamento" in the actions dropdown no longer calls `POST /orders/:id/confirm-payment` blindly.
+- It loads `/payments/order/:orderId` first:
+  - pending payment → `PATCH /payments/:id/confirm`;
+  - already confirmed payment → idempotent `POST /orders/:id/confirm-payment`;
+  - no payment (order sent without one) → opens a modal to register the payment method (cash with change, Pix reference or card debit/credit), then creates the payment and confirms it.
+- This fixes the "Nenhum pagamento registrado para este pedido" error when confirming an order from `/orders`.
+
 ## API Integration (Front → Back)
 - Base URL: `VITE_API_URL` (Vercel dashboard) or fallback `https://quiosque-api.136-248-90-172.nip.io`
 - Key endpoints:
