@@ -15,7 +15,7 @@ interface Order {
   id: string
   code: number
   dayKey: string
-  shift: { id: string; number: number }
+  shift: { id: string; number: number } | string
   items: { name: string; qty: number; unitPriceCents: number; note?: string }[]
   totalCents: number
   status: string
@@ -31,6 +31,10 @@ const PAYMENT_METHODS = [
   { id: 'pix', label: 'Pix', icon: '📱' },
   { id: 'cartao', label: 'Cartão', icon: '💳' },
 ]
+
+// A API pode devolver o turno como id (string) ou populado ({ id, number }).
+const getShiftId = (order: Order) => (typeof order.shift === 'string' ? order.shift : order.shift.id)
+const getShiftNumber = (order: Order) => (typeof order.shift === 'string' ? null : order.shift.number)
 
 const STATUS_TABS = [
   { id: 'all', label: 'Todos' },
@@ -150,7 +154,7 @@ export const Orders = () => {
     try {
       const payment = await api.post<any>('/payments', {
         orderId: paymentOrder.id,
-        shiftId: paymentOrder.shift.id,
+        shiftId: getShiftId(paymentOrder),
         method: paymentMethod,
         amount,
         received: paymentMethod === 'dinheiro' ? received : undefined,
@@ -252,7 +256,7 @@ export const Orders = () => {
     )},
     { key: 'total', header: 'Total', render: (o: Order) => <strong>{formatReais(o.totalCents)}</strong> },
     { key: 'status', header: 'Status', render: (o: Order) => <StatusBadge status={o.status} /> },
-    { key: 'shift', header: 'Turno', render: (o: Order) => <Badge variant="primary" size="sm">#{o.shift.number}</Badge> },
+    { key: 'shift', header: 'Turno', render: (o: Order) => <Badge variant="primary" size="sm">{getShiftNumber(o) ? `#${getShiftNumber(o)}` : '—'}</Badge> },
     { key: 'createdBy', header: 'Atendente', render: (o: Order) => o.createdBy?.name || '—' },
     { key: 'createdAt', header: 'Criado em', render: (o: Order) => formatDateTime(o.createdAt) },
     { key: 'actions', header: 'Ações', render: (o: Order) => (
@@ -361,7 +365,7 @@ export const Orders = () => {
                   )}
                 </div>
                 <div style={{ marginTop: 'var(--space-2)', color: 'var(--color-text-secondary)', fontSize: 'var(--text-sm)' }}>
-                  Turno #{selectedOrder.shift.number} • {selectedOrder.createdBy?.name} • {formatDateTime(selectedOrder.createdAt)}
+                  Turno {getShiftNumber(selectedOrder) ? `#${getShiftNumber(selectedOrder)}` : '—'} • {selectedOrder.createdBy?.name} • {formatDateTime(selectedOrder.createdAt)}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>

@@ -43,6 +43,7 @@
   - already confirmed payment → idempotent `POST /orders/:id/confirm-payment`;
   - no payment (order sent without one) → opens a modal to register the payment method (cash with change, Pix reference or card debit/credit), then creates the payment and confirms it.
 - This fixes the "Nenhum pagamento registrado para este pedido" error when confirming an order from `/orders`.
+- `shift` is normalized (`getShiftId`/`getShiftNumber`): the API may return either the shift id (string) or the populated `{ id, number }`. The payment modal always sends a valid `shiftId`.
 
 ## API Integration (Front → Back)
 - Base URL: `VITE_API_URL` (Vercel dashboard) or fallback `https://quiosque-api.136-248-90-172.nip.io`
