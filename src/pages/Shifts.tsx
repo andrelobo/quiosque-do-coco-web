@@ -36,6 +36,23 @@ interface CashMovement {
   createdAt: string
 }
 
+interface CashSummary {
+  shift: { number: number; status: string }
+  initialCashCents: number
+  cashReceivedCents: number
+  cashRefundedCents: number
+  reforcosCents: number
+  retiradasCents: number
+  pixCents: number
+  cardCents: number
+  cardDebitCents: number
+  cardCreditCents: number
+  totalSalesCents: number
+  expectedCashCents: number
+  countedCashCents: number
+  differenceCents: number
+}
+
 export const Shifts = () => {
   const { hasRole } = useAuth()
   const { success, error: showError } = useToast()
@@ -49,6 +66,7 @@ export const Shifts = () => {
   const [modalMode, setModalMode] = useState<'open' | 'close'>('open')
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
   const [cashMovements, setCashMovements] = useState<CashMovement[]>([])
+  const [cashSummary, setCashSummary] = useState<CashSummary | null>(null)
   const [formData, setFormData] = useState({
     initialCashCents: '',
     countedCashCents: '',
@@ -91,6 +109,19 @@ export const Shifts = () => {
       setCashMovements(data)
     } catch (err: any) {
       showError('Erro ao carregar movimentações', err.message)
+    }
+  }, [showError])
+
+  // Busca o resumo real do caixa (dinheiro, Pix, cartão, esperado e diferença).
+  const loadCashSummary = useCallback(async (shiftId: string) => {
+    try {
+      const summary = await api.get<CashSummary>(`/reports/cash/${shiftId}`)
+      setCashSummary(summary)
+      setFormData(prev => prev.countedCashCents
+        ? prev
+        : { ...prev, countedCashCents: String(summary.expectedCashCents) })
+    } catch (err: any) {
+      showError('Erro ao carregar resumo do caixa', err.message)
     }
   }, [showError])
 
@@ -151,10 +182,22 @@ export const Shifts = () => {
   const openShiftDetail = (shift: Shift) => {
     setSelectedShift(shift)
     setModalMode('close')
-    setFormData({ initialCashCents: '', countedCashCents: String(shift.expectedCashCents || 0), closingNotes: '' })
+    setCashSummary(null)
+    setFormData({
+      initialCashCents: '',
+      countedCashCents: shift.countedCashCents !== undefined ? String(shift.countedCashCents) : '',
+      closingNotes: shift.closingNotes || '',
+    })
     loadCashMovements(shift.id)
+    loadCashSummary(shift.id)
     setModalOpen(true)
   }
+
+  // Valores usados no fechamento: o resumo da API é a fonte da verdade; se
+  // ainda não carregou, cai no valor persistido no turno.
+  const expectedCash = cashSummary?.expectedCashCents ?? selectedShift?.expectedCashCents ?? 0
+  const countedCash = parseFloat(formData.countedCashCents || '0')
+  const projectedDifference = countedCash - expectedCash
 
   const columns = [
     { key: 'number', header: 'Nº', render: (s: Shift) => <strong>#{s.number}</strong> },
@@ -183,7 +226,7 @@ export const Shifts = () => {
         trigger={<button className="btn btn-ghost btn-sm" style={{ padding: 'var(--space-1) var(--space-2)' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg></button>}
         items={[
           { label: 'Ver detalhes', onClick: () => openShiftDetail(s), icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg> },
-          { label: 'Movimentações de caixa', onClick: () => { setSelectedShift(s); loadCashMovements(s.id); setModalMode('close'); setFormData({ initialCashCents: '', countedCashCents: String(s.expectedCashCents || 0), closingNotes: '' }); setModalOpen(true); }, icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
+          { label: 'Movimentações de caixa', onClick: () => openShiftDetail(s), icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
         ]}
       />
     )},
@@ -281,18 +324,25 @@ export const Shifts = () => {
       <Modal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setSelectedShift(null); }}
-        title={modalMode === 'open' ? 'Abrir Novo Turno' : `Fechar Turno #${selectedShift?.number}`}
+        title={
+          modalMode === 'open'
+            ? 'Abrir Novo Turno'
+            : selectedShift?.status === 'aberto'
+              ? `Fechar Turno #${selectedShift?.number}`
+              : `Turno #${selectedShift?.number}`
+        }
         size="md"
         footer={
           <>
             <Button variant="ghost" onClick={() => { setModalOpen(false); setSelectedShift(null); }} disabled={submitting}>
-              Cancelar
+              {modalMode === 'open' || selectedShift?.status === 'aberto' ? 'Cancelar' : 'Fechar'}
             </Button>
-            {modalMode === 'open' ? (
+            {modalMode === 'open' && (
               <Button variant="primary" onClick={handleOpenShift} loading={submitting} disabled={submitting}>
                 {submitting ? 'Abrindo...' : 'Abrir Turno'}
               </Button>
-            ) : (
+            )}
+            {modalMode === 'close' && selectedShift?.status === 'aberto' && (
               <Button variant="success" onClick={handleCloseShift} loading={submitting} disabled={submitting}>
                 {submitting ? 'Fechando...' : 'Fechar Turno'}
               </Button>
@@ -322,36 +372,64 @@ export const Shifts = () => {
             <div style={{ padding: 'var(--space-4)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--space-3)', fontSize: 'var(--text-sm)' }}>
                 <div><span style={{ color: 'var(--color-text-muted)' }}>Fundo Inicial</span><br/><strong>{formatReais(selectedShift?.initialCashCents || 0)}</strong></div>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Esperado em Dinheiro</span><br/><strong>{formatReais(selectedShift?.expectedCashCents || 0)}</strong></div>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Pix</span><br/><strong>{formatReais(0)}</strong></div>
-                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Cartão</span><br/><strong>{formatReais(0)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Esperado em Dinheiro</span><br/><strong>{formatReais(expectedCash)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Pix</span><br/><strong>{formatReais(cashSummary?.pixCents ?? 0)}</strong></div>
+                <div><span style={{ color: 'var(--color-text-muted)' }}>Recebimentos Cartão</span><br/><strong>{formatReais(cashSummary?.cardCents ?? 0)}</strong></div>
               </div>
+              {cashSummary && (
+                <div style={{ marginTop: 'var(--space-3)', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
+                  Cartão: débito {formatReais(cashSummary.cardDebitCents)} · crédito {formatReais(cashSummary.cardCreditCents)}
+                </div>
+              )}
             </div>
-            <Input
-              label="Dinheiro Contado (R$)"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.countedCashCents}
-              onChange={e => setFormData(prev => ({ ...prev, countedCashCents: e.target.value }))}
-              placeholder="Ex: 150.00"
-              required
-              hint="Conte o dinheiro físico no caixa e informe o total em Reais"
-            />
-            <Input
-              label="Observações (opcional)"
-              type="text"
-              value={formData.closingNotes}
-              onChange={e => setFormData(prev => ({ ...prev, closingNotes: e.target.value }))}
-              placeholder="Diferenças, problemas, etc."
-            />
-            {selectedShift && (
-              <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' }}>
-                <strong>Diferença projetada:</strong>{' '}
-                <span style={{ color: ((parseFloat(formData.countedCashCents || '0') - (selectedShift?.expectedCashCents || 0)) >= 0 ? 'var(--color-success)' : 'var(--color-danger)'), fontWeight: 'var(--font-bold)' }}>
-                  {formatReais(parseFloat(formData.countedCashCents || '0') - (selectedShift?.expectedCashCents || 0))}
-                </span>
-              </div>
+            {selectedShift?.status === 'aberto' ? (
+              <>
+                <Input
+                  label="Dinheiro Contado (R$)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.countedCashCents}
+                  onChange={e => setFormData(prev => ({ ...prev, countedCashCents: e.target.value }))}
+                  placeholder="Ex: 150.00"
+                  required
+                  hint="Conte o dinheiro físico no caixa e informe o total em Reais"
+                />
+                <Input
+                  label="Observações (opcional)"
+                  type="text"
+                  value={formData.closingNotes}
+                  onChange={e => setFormData(prev => ({ ...prev, closingNotes: e.target.value }))}
+                  placeholder="Diferenças, problemas, etc."
+                />
+                <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' }}>
+                  <strong>Diferença projetada:</strong>{' '}
+                  <span style={{ color: projectedDifference >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 'var(--font-bold)' }}>
+                    {projectedDifference >= 0 ? '+' : ''}{formatReais(projectedDifference)}
+                  </span>
+                </div>
+              </>
+            ) : (
+              selectedShift && (
+                <div style={{ padding: 'var(--space-3)', background: 'var(--color-bg-subtle)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', display: 'grid', gap: 'var(--space-2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Dinheiro contado</span>
+                    <strong>{formatReais(selectedShift.countedCashCents ?? 0)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>Diferença</span>
+                    <strong style={{ color: (selectedShift.differenceCents ?? 0) >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                      {(selectedShift.differenceCents ?? 0) >= 0 ? '+' : ''}{formatReais(selectedShift.differenceCents ?? 0)}
+                    </strong>
+                  </div>
+                  {selectedShift.closingNotes && (
+                    <div>
+                      <span style={{ color: 'var(--color-text-muted)' }}>Observações: </span>
+                      {selectedShift.closingNotes}
+                    </div>
+                  )}
+                </div>
+              )
             )}
           </div>
         )}
