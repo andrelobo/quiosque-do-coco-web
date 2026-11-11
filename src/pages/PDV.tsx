@@ -25,7 +25,9 @@ interface Product {
 }
 
 interface ShiftAvailability {
-  product: string
+  // A API antiga devolvia apenas o id; a partir do populate ela devolve o
+  // produto completo. Aceitar os dois formatos mantém o deploy seguro.
+  product: string | { id: string }
   available: boolean
 }
 
@@ -147,7 +149,7 @@ export const PDV = () => {
     const availableProductIds = new Set(
       shift.availability
         .filter(a => a.available)
-        .map(a => a.product)
+        .map(a => (typeof a.product === 'string' ? a.product : a.product.id))
     )
 
     return products.filter(p => {

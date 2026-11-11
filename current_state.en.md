@@ -34,6 +34,7 @@
 - Closed shifts open in read-only mode: counted cash, persisted difference, notes; the close button is hidden.
 - Both dropdown actions ("Ver detalhes" and "Movimentações de caixa") open the same detail modal.
 - Money inputs are in reais and go to the API as reais (`amount`/`received` are converted to cents by the backend pipe).
+- PDV accepts `shift.availability[].product` as either an id (older API) or a populated object (API PR #4), keeping deploys safe in both orders.
 
 ## API Integration (Front → Back)
 - Base URL: `VITE_API_URL` (Vercel dashboard) or fallback `https://quiosque-api.136-248-90-172.nip.io`
@@ -59,6 +60,5 @@
 - Bundle contains fallback API URL when `VITE_API_URL` not set.
 
 ## Known Issues / Tech Debt
-- `GET /shifts/current` returns `availability.product` as an id (no populate); Shifts UI only counts availability today.
 - No automated tests/lint in CI.
 - `npm audit` vulnerabilities (pending review).

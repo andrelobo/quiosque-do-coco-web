@@ -32,7 +32,7 @@ Pages: PDV (point-of-sale), Orders (order management), Products, Shifts, Stock, 
 
 ## P1 Pending (outside P0)
 - Automated tests (unit/e2e).
-- `GET /shifts/current` returns `availability.product` as an id (no populate) — UI uses only counts today.
+- `GET /shifts/current` may return `availability.product` as an id (older API) or as a full object (API PR #4); the PDV handles both formats.
 - Audit UI page (endpoint exists on the API).
 - Absence of lint/tests in CI.
 
@@ -68,6 +68,5 @@ Pages: PDV (point-of-sale), Orders (order management), Products, Shifts, Stock, 
 - Bundle contains fallback API URL.
 
 ## Known Issues / Tech Debt
-- `GET /shifts/current` returns `availability.product` as an id (populate does not work); Shifts UI only counts availability today.
 - No automated tests/lint in CI.
 - `npm audit` vulnerabilities (pending review).

@@ -24,7 +24,7 @@ interface Shift {
   expectedCashCents?: number
   differenceCents?: number
   closingNotes?: string
-  availability: { product: { id: string; name: string }; available: boolean }[]
+  availability: { product: string | { id: string; name?: string }; available: boolean }[]
 }
 
 interface CashMovement {
