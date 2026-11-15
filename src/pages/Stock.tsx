@@ -153,9 +153,11 @@ export const Stock = () => {
     { key: 'price', header: 'Preço', render: (p: Product) => formatReais(p.priceCents) },
     { key: 'actions', header: 'Ações', render: (p: Product) => (
       <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-        <Button variant="outline" size="sm" onClick={() => openAdjustModal(p.id)} disabled={!p.active}>
-          Ajustar
-        </Button>
+        {hasRole('admin', 'responsavel') && (
+          <Button variant="outline" size="sm" onClick={() => openAdjustModal(p.id)} disabled={!p.active}>
+            Ajustar
+          </Button>
+        )}
         <Button variant="ghost" size="sm" onClick={() => openHistoryModal(p.id)}>
           Histórico
         </Button>

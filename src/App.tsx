@@ -165,6 +165,25 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>
 }
 
+// Bloqueia rotas restritas por papel (além do filtro do menu).
+const RequireRole = ({ roles, children }: { roles: string[]; children: React.ReactNode }) => {
+  const { hasRole, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <div className="spinner spinner-lg" />
+      </div>
+    )
+  }
+
+  if (!hasRole(...roles)) {
+    return <Navigate to="/pdv" replace />
+  }
+
+  return <>{children}</>
+}
+
 const App = () => {
   return (
     <Routes>
@@ -173,9 +192,9 @@ const App = () => {
         <Route path="/pdv" element={<PDV />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/shifts" element={<Shifts />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/stock" element={<Stock />} />
-        <Route path="/reports" element={<Reports />} />
+        <Route path="/products" element={<RequireRole roles={['admin', 'responsavel']}><Products /></RequireRole>} />
+        <Route path="/stock" element={<RequireRole roles={['admin', 'responsavel']}><Stock /></RequireRole>} />
+        <Route path="/reports" element={<RequireRole roles={['admin', 'responsavel']}><Reports /></RequireRole>} />
       </Route>
       <Route path="/" element={<Navigate to="/pdv" replace />} />
       <Route path="*" element={<Navigate to="/pdv" replace />} />

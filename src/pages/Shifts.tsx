@@ -221,7 +221,8 @@ export const Shifts = () => {
         </span>
       ) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>
     },
-    { key: 'actions', header: 'Ações', render: (s: Shift) => (
+    ...(hasRole('admin', 'responsavel') ? [{
+      key: 'actions', header: 'Ações', render: (s: Shift) => (
       <Dropdown
         trigger={<button className="btn btn-ghost btn-sm" style={{ padding: 'var(--space-1) var(--space-2)' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></svg></button>}
         items={[
@@ -229,7 +230,8 @@ export const Shifts = () => {
           { label: 'Movimentações de caixa', onClick: () => openShiftDetail(s), icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
         ]}
       />
-    )},
+      ),
+    }] : []),
   ]
 
   return (
