@@ -12,21 +12,22 @@ import { Tabs, TabPanel } from '../components/Tabs'
 import { Skeleton } from '../components/Skeleton'
 
 interface SalesByPeriod {
-  _id: { date: string; shift: number }
+  date: string
+  shift: number
   orderCount: number
   itemsSold: number
   totalValue: number
 }
 
 interface SalesByProduct {
-  _id: string
+  productId: string
   name: string
   qty: number
   totalValue: number
 }
 
 interface PaymentsByMethod {
-  _id: string
+  method: string
   count: number
   totalValue: number
 }
@@ -173,14 +174,14 @@ export const Reports = () => {
         </div>
         <Table
           columns={[
-            { key: 'date', header: 'Data', render: (d: any) => d._id.date },
-            { key: 'shift', header: 'Turno', render: (d: any) => `#${d._id.shift}` },
+            { key: 'date', header: 'Data', render: (d: any) => d.date },
+            { key: 'shift', header: 'Turno', render: (d: any) => `#${d.shift}` },
             { key: 'orderCount', header: 'Pedidos', render: (d: any) => d.orderCount },
             { key: 'itemsSold', header: 'Itens', render: (d: any) => d.itemsSold },
             { key: 'totalValue', header: 'Valor', render: (d: any) => <strong>{formatReais(d.totalValue)}</strong> },
           ]}
           data={data}
-          keyExtractor={d => `${d._id.date}-${d._id.shift}`}
+          keyExtractor={d => `${d.date}-${d.shift}`}
           striped
         />
       </>
@@ -217,7 +218,7 @@ export const Reports = () => {
             { key: 'avg', header: 'Preço Médio', render: (d: any) => formatReais(Math.round(d.totalValue / d.qty)) },
           ]}
           data={data}
-          keyExtractor={d => d._id}
+          keyExtractor={d => d.productId}
           striped
         />
       </>
@@ -250,7 +251,7 @@ export const Reports = () => {
           columns={[
             { key: 'method', header: 'Modalidade', render: (d: any) => (
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                <Badge variant="primary" size="sm">{getPaymentMethodLabel(d._id)}</Badge>
+                <Badge variant="primary" size="sm">{getPaymentMethodLabel(d.method)}</Badge>
               </div>
             )},
             { key: 'count', header: 'Qtd', render: (d: any) => d.count },
@@ -258,7 +259,7 @@ export const Reports = () => {
             { key: 'avg', header: 'Ticket Médio', render: (d: any) => formatReais(Math.round(d.totalValue / d.count)) },
           ]}
           data={data}
-          keyExtractor={d => d._id}
+          keyExtractor={d => d.method}
           striped
         />
       </>
@@ -421,12 +422,12 @@ export const Reports = () => {
           <CardBody>
             <Table
               columns={[
-                { key: 'type', header: 'Tipo', render: (d: any) => <Badge variant="primary" size="sm">{d._id}</Badge> },
+                { key: 'type', header: 'Tipo', render: (d: any) => <Badge variant="primary" size="sm">{d.type}</Badge> },
                 { key: 'count', header: 'Qtd Mov.', render: (d: any) => d.count },
                 { key: 'totalQty', header: 'Total Unidades', render: (d: any) => d.totalQty },
               ]}
-              data={Object.entries(summary).map(([k, v]) => ({ _id: k, ...v }))}
-              keyExtractor={d => d._id}
+              data={Object.entries(summary).map(([k, v]) => ({ type: k, ...v }))}
+              keyExtractor={d => d.type}
               striped
             />
           </CardBody>
