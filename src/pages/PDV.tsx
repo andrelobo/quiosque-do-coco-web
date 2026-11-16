@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { api, formatCurrency, formatReais, getCategoryLabel } from '../lib/api'
+import { matchesSearch } from '../lib/search'
 import { Button } from '../components/Button'
 import { Badge, StatusBadge } from '../components/Badge'
 import { Modal, ConfirmModal } from '../components/Modal'
@@ -155,7 +156,7 @@ export const PDV = () => {
     return products.filter(p => {
       if (!availableProductIds.has(p.id)) return false
       if (selectedCategory !== 'all' && p.category !== selectedCategory) return false
-      if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false
+      if (searchTerm && !matchesSearch(p.name, searchTerm)) return false
       return true
     })
   }, [products, shift, selectedCategory, searchTerm])

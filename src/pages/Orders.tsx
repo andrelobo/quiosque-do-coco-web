@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { api, formatReais, formatDateTime, getStatusLabel, getPaymentMethodLabel } from '../lib/api'
@@ -61,8 +61,10 @@ export const Orders = () => {
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [pageSize, setPageSize] = useState(10)
   const [activeTab, setActiveTab] = useState('all')
+  const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -76,24 +78,65 @@ export const Orders = () => {
   const [cardType, setCardType] = useState<'debito' | 'credito'>('debito')
   const [pixReference, setPixReference] = useState('')
 
+  // Evita que uma resposta atrasada de uma busca antiga sobrescreva a atual.
+  const requestId = useRef(0)
+
   const loadOrders = useCallback(async () => {
+    const id = ++requestId.current
     try {
-      const status = activeTab !== 'all' ? activeTab : undefined
       // A API responde paginado: { data, total, page, limit, totalPages }.
-      const res = await api.get<any>(`/orders?status=${status || ''}&page=${page}&limit=${pageSize}&search=${searchTerm}`)
+      // A busca é feita no servidor (cliente, item e código); filtrar só a
+      // página atual no cliente esconderia resultados das outras páginas.
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(pageSize),
+      })
+      if (activeTab !== 'all') params.set('status', activeTab)
+      if (searchTerm.trim()) params.set('search', searchTerm.trim())
+
+      const res = await api.get<any>(`/orders?${params.toString()}`)
+      if (id !== requestId.current) return
+
       const list: Order[] = Array.isArray(res) ? res : (res?.data ?? [])
       setOrders(list)
-      setTotalPages(Array.isArray(res) ? Math.ceil(list.length / pageSize) || 1 : (res?.totalPages || 1))
+      setTotalItems(Array.isArray(res) ? list.length : (res?.total ?? list.length))
+      setTotalPages(
+        Array.isArray(res) ? Math.ceil(list.length / pageSize) || 1 : (res?.totalPages || 1),
+      )
     } catch (err: any) {
+      if (id !== requestId.current) return
       showError('Erro ao carregar pedidos', err.message)
     } finally {
-      setLoading(false)
+      if (id === requestId.current) setLoading(false)
     }
-  }, [activeTab, page, pageSize, showError])
+  }, [activeTab, page, pageSize, searchTerm, showError])
 
   useEffect(() => {
     loadOrders()
   }, [loadOrders])
+
+  // Debounce: não dispara uma requisição por tecla digitada.
+  // O guarda de igualdade evita que o timer criado no primeiro render (campo
+  // vazio) devolva o usuário para a página 1 logo depois de ele trocar de
+  // página — antes o clique em "Página 2" era desfeito ~300ms após abrir a tela.
+  useEffect(() => {
+    if (searchInput === searchTerm) return
+    const timer = setTimeout(() => {
+      setSearchTerm(searchInput)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput, searchTerm])
+
+  // Trocar de aba ou de tamanho de página volta para a primeira página.
+  const changeTab = (tab: string) => {
+    setActiveTab(tab)
+    setPage(1)
+  }
+  const changePageSize = (size: number) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const loadOrderDetails = useCallback(async (orderId: string) => {
     try {
@@ -238,14 +281,6 @@ export const Orders = () => {
     }
   }
 
-  const filteredOrders = orders.filter(o => 
-    searchTerm === '' || 
-    o.code.toString().includes(searchTerm) ||
-    o.dayKey.includes(searchTerm) ||
-    o.pickupName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.items.some(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
-
   const columns = [
     { key: 'code', header: 'Pedido', render: (o: Order) => (
       <div>
@@ -301,12 +336,12 @@ export const Orders = () => {
       <Card className="mb-6">
         <CardBody>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-4)', alignItems: 'center' }}>
-            <Tabs tabs={STATUS_TABS} activeTab={activeTab} onChange={setActiveTab} />
+            <Tabs tabs={STATUS_TABS} activeTab={activeTab} onChange={changeTab} />
             
             <Input
               placeholder="Buscar pedido, cliente, item..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               leftIcon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="11" cy="11" r="8" />
@@ -328,7 +363,7 @@ export const Orders = () => {
                 <div key={i} className="skeleton" style={{ height: '56px', borderRadius: 'var(--radius-md)' }} />
               ))}
             </div>
-          ) : filteredOrders.length === 0 ? (
+          ) : orders.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 'var(--space-12)', color: 'var(--color-text-muted)' }}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: 'var(--space-4)', opacity: 0.5 }}>
                 <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -340,7 +375,7 @@ export const Orders = () => {
             <>
               <Table
                 columns={columns}
-                data={filteredOrders}
+                data={orders}
                 keyExtractor={o => o.id}
                 striped
                 hoverable
@@ -350,8 +385,8 @@ export const Orders = () => {
                 totalPages={totalPages}
                 onPageChange={setPage}
                 pageSize={pageSize}
-                onPageSizeChange={setPageSize}
-                totalItems={filteredOrders.length}
+                onPageSizeChange={changePageSize}
+                totalItems={totalItems}
               />
             </>
           )}
