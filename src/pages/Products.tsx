@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { api, formatCurrency, formatReais, getCategoryLabel, getStatusLabel } from '../lib/api'
+import { matchesSearch } from '../lib/search'
 import { Button } from '../components/Button'
 import { Input } from '../components/Input'
 import { Select } from '../components/Select'
@@ -81,7 +82,7 @@ export const Products = () => {
 
   const filteredProducts = products.filter(p => {
     if (categoryFilter !== 'all' && p.category !== categoryFilter) return false
-    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false
+    if (searchTerm && !matchesSearch(p.name, searchTerm)) return false
     return true
   })
 
