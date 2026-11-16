@@ -548,6 +548,15 @@ a:hover {
   box-shadow: 0 0 0 3px var(--color-danger-light);
 }
 
+/* Espaço para o ícone absoluto não sobrepor texto/placeholder. */
+.input-field.has-left-icon {
+  padding-left: var(--space-10);
+}
+
+.input-field.has-right-icon {
+  padding-right: var(--space-10);
+}
+
 .input-error {
   font-size: var(--text-xs);
   color: var(--color-danger);

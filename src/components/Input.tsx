@@ -37,7 +37,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            className={`input-field ${error ? 'error' : ''} ${leftIcon ? 'pl-10' : ''} ${rightIcon ? 'pr-10' : ''}`}
+            className={`input-field ${error ? 'error' : ''} ${leftIcon ? 'has-left-icon' : ''} ${rightIcon ? 'has-right-icon' : ''}`}
             aria-invalid={error ? 'true' : 'false'}
             aria-describedby={error ? errorId : hint ? hintId : undefined}
             {...props}
